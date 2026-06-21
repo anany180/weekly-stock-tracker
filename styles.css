@@ -1,13 +1,12 @@
 body {
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: Arial, sans-serif;
   background: #f5f7fa;
   margin: 0;
   padding: 20px;
-  color: #333;
 }
 
 .container {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: auto;
   background: white;
   padding: 25px;
@@ -15,88 +14,7 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
-h1 {
-  margin-top: 0;
-  color: #1e3a8a;
-}
-
-.controls {
-  margin: 20px 0;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-button, .upload-btn {
-  padding: 10px 16px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.upload-btn {
-  background: #16a34a;
-  cursor: pointer;
-}
-
-button:hover, .upload-btn:hover {
-  opacity: 0.9;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-th, td {
-  padding: 14px;
-  text-align: center;
-  border: 1px solid #ddd;
-}
-
-th {
-  background: #f1f5f9;
-  color: #1e40af;
-}
-
-.symbol-link {
-  color: #2563eb;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.symbol-link:hover {
-  text-decoration: underline;
-  color: #1e40af;
-}
-
-.positive {
-  color: #16a34a;
-  font-weight: bold;
-}
-
-.negative {
-  color: #dc2626;
-  font-weight: bold;
-}
-
-.remove-btn {
-  background: #ef4444;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-#addInput {
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 15px;
-  width: 420px;
-}
+h1 { color: #1e3a8a; margin-top: 0; }
 
 .controls {
   margin: 20px 0;
@@ -105,11 +23,59 @@ th {
   flex-wrap: wrap;
   align-items: center;
 }
-.clear-btn {
-  background: #ef4444;
-  color: white;
+
+button {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.clear-btn:hover {
-  background: #dc2626;
+button:hover { opacity: 0.9; }
+
+.clear-btn { background: #ef4444; color: white; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
 }
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+th { background: #f1f5f9; }
+
+.symbol-link {
+  color: #2563eb;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.symbol-link:hover { text-decoration: underline; }
+
+.link-text {
+  font-size: 0.9em;
+  color: #2563eb;
+  word-break: break-all;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.remove-btn {
+  background: #ef4444;
+  color: white;
+  padding: 6px 12px;
+}
+
+.positive { color: green; font-weight: bold; }
+.negative { color: red; font-weight: bold; }
