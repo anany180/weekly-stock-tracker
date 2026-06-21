@@ -1,129 +1,83 @@
-let stocks = [];
-let stockDataCache = {};
+// Weekly Stock Tracker - script.js
+let stocks = JSON.parse(localStorage.getItem('stocks')) || [];
 
-const tableBody = document.querySelector('#stockTable tbody');
-const statusEl = document.getElementById('status');
-const countEl = document.getElementById('stockCount');
+// Generate TradingView URL
+function getTradingViewUrl(symbol) {
+  const cleanSymbol = symbol.replace('.NS', '').replace('.BO', '');
+  return `https://in.tradingview.com/symbols/NSE-${cleanSymbol}/`;
+}
 
+// Fetch current price and weekly change
 async function fetchStockData(symbol) {
-    if (stockDataCache[symbol] && Date.now() - stockDataCache[symbol].timestamp < 300000) {
-        return stockDataCache[symbol].data;
-    }
+  try {
+    // Current Price
+    const quoteRes = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`);
+    const quoteData = await quoteRes.json();
+    const price = quoteData.chart.result[0].meta.regularMarketPrice.toFixed(2);
 
-    try {
-        // Using Yahoo Finance unofficial API (yfinance-like via public endpoint)
-        // Note: For production, use Finnhub or Alpha Vantage with API key
-        const encodedSymbol = encodeURIComponent(symbol);
-        
-        // Current quote
-        const quoteRes = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodedSymbol}?interval=1d&range=1d`);
-        const quoteData = await quoteRes.json();
-        
-        let currentPrice = 'N/A';
-        let weeklyChange = 'N/A';
-        
-        if (quoteData.chart && quoteData.chart.result && quoteData.chart.result[0]) {
-            const result = quoteData.chart.result[0];
-            currentPrice = result.meta.regularMarketPrice || result.meta.previousClose;
-            
-            // Weekly candles
-            const weekRes = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodedSymbol}?interval=1wk&range=1mo`);
-            const weekData = await weekRes.json();
-            
-            if (weekData.chart && weekData.chart.result && weekData.chart.result[0]) {
-                const closes = weekData.chart.result[0].indicators.quote[0].close.filter(c => c !== null);
-                if (closes.length >= 2) {
-                    const latest = closes[closes.length - 1];
-                    const previous = closes[closes.length - 2];
-                    weeklyChange = ((latest - previous) / previous * 100).toFixed(2);
-                }
-            }
-        }
-
-        const data = {
-            symbol: symbol,
-            price: parseFloat(currentPrice).toFixed(2),
-            change: weeklyChange,
-            timestamp: Date.now()
-        };
-
-        stockDataCache[symbol] = { data, timestamp: Date.now() };
-        return data;
-    } catch (e) {
-        console.error(e);
-        return { symbol, price: 'N/A', change: 'N/A' };
-    }
-}
-
-async function renderTable() {
-    tableBody.innerHTML = '';
-    countEl.textContent = `${stocks.length} stocks loaded`;
-
-    for (let symbol of stocks) {
-        const data = await fetchStockData(symbol);
-        const row = document.createElement('tr');
-        
-        const changeClass = data.change > 0 ? 'positive' : (data.change < 0 ? 'negative' : '');
-        const changeText = data.change !== 'N/A' ? `${data.change}%` : 'N/A';
-        
-        row.innerHTML = `
-            <td><strong>${symbol}</strong></td>
-            <td>${getCompanyName(symbol) || ''}</td>
-            <td>₹${data.price}</td>
-            <td class="${changeClass}">${changeText}</td>
-            <td><button onclick="removeStock('${symbol}')" class="clear-btn" style="padding: 4px 10px; font-size: 0.85rem;">Remove</button></td>
-        `;
-        tableBody.appendChild(row);
-    }
-}
-
-function getCompanyName(symbol) {
-    // Simple mapping for common NSE stocks - expand as needed
-    const names = {
-        'RELIANCE.NS': 'Reliance Industries',
-        'TCS.NS': 'Tata Consultancy',
-        'HDFCBANK.NS': 'HDFC Bank',
-        'INFY.NS': 'Infosys',
-        // Add more as you like
-    };
-    return names[symbol] || symbol.replace('.NS', '');
-}
-
-function loadCSV() {
-    const fileInput = document.getElementById('csvFile');
-    const file = fileInput.files[0];
+    // Weekly Change
+    const weekRes = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1wk&range=1mo`);
+    const weekData = await weekRes.json();
+    const closes = weekData.chart.result[0].indicators.quote[0].close;
     
-    if (!file) {
-        statusEl.textContent = 'Please select a CSV file';
-        return;
+    let weeklyChange = 0;
+    if (closes && closes.length >= 2) {
+      weeklyChange = ((closes[closes.length-1] - closes[closes.length-2]) / closes[closes.length-2] * 100);
     }
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const rows = text.trim().split('\n');
-        
-        stocks = [];
-        for (let i = 0; i < rows.length; i++) {
-            let symbol = rows[i].trim().toUpperCase();
-            if (symbol && !symbol.startsWith('#') && !symbol.startsWith('//')) {
-                if (!symbol.endsWith('.NS') && !symbol.endsWith('.BO')) {
-                    symbol += '.NS'; // Default to NSE
-                }
-                if (!stocks.includes(symbol)) stocks.push(symbol);
-            }
-        }
-        
-        localStorage.setItem('weeklyStocks', JSON.stringify(stocks));
-        statusEl.textContent = `Loaded ${stocks.length} stocks successfully!`;
-        renderTable();
-        renderAllCharts();
+    return { 
+      price: price, 
+      change: parseFloat(weeklyChange.toFixed(2)) 
     };
-    reader.readAsText(file);
+  } catch (error) {
+    console.error(`Error fetching data for ${symbol}:`, error);
+    return { price: 'N/A', change: 0 };
+  }
 }
 
+// Render the main table with TradingView links
+async function renderTable() {
+  const tbody = document.querySelector('#stockTable tbody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '';
+
+  for (let symbol of stocks) {
+    const data = await fetchStockData(symbol);
+    const changeClass = data.change >= 0 ? 'positive' : 'negative';
+    const tvUrl = getTradingViewUrl(symbol);
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>
+        <a href="${tvUrl}" target="_blank" rel="noopener noreferrer" class="symbol-link">
+          <strong>${symbol}</strong>
+        </a>
+      </td>
+      <td>₹${data.price}</td>
+      <td class="${changeClass}">${data.change}%</td>
+      <td><button onclick="removeStock('${symbol}')" class="remove-btn">Remove</button></td>
+    `;
+    tbody.appendChild(row);
+  }
+}
+
+// Remove stock
+function removeStock(symbol) {
+  stocks = stocks.filter(s => s !== symbol);
+  localStorage.setItem('stocks', JSON.stringify(stocks));
+  renderTable();
+}
+
+// Refresh all data
+async function refreshAllData() {
+  await renderTable();
+  alert('✅ Data refreshed successfully!');
+}
+
+// Download Sample CSV (50 stocks)
 function downloadSampleCSV() {
-    const sample = `Symbol
+  const csvContent = `Symbol
 RELIANCE.NS
 TCS.NS
 HDFCBANK.NS
@@ -134,106 +88,77 @@ SBIN.NS
 BHARTIARTL.NS
 HINDUNILVR.NS
 ITC.NS
-LT.NS
 AXISBANK.NS
-BAJFINANCE.NS
-MARUTI.NS
+LT.NS
 SUNPHARMA.NS
-HCLTECH.NS
-ASIANPAINT.NS
-TITAN.NS
 ULTRACEMCO.NS
-WIPRO.NS`;
-    
-    const blob = new Blob([sample], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sample_50_stocks.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+BAJFINANCE.NS
+WIPRO.NS
+HCLTECH.NS
+POWERGRID.NS
+NTPC.NS
+TATAMOTORS.NS
+MARUTI.NS
+INDUSINDBK.NS
+TECHM.NS
+ADANIENT.NS
+JSWSTEEL.NS
+COALINDIA.NS
+TATASTEEL.NS
+GRASIM.NS
+HEROMOTOCO.NS
+DRREDDY.NS
+CIPLA.NS
+BRITANNIA.NS
+EICHERMOT.NS
+APOLLOHOSP.NS
+DIVISLAB.NS
+HDFCLIFE.NS
+SBILIFE.NS
+BAJAJFINSV.NS
+ADANIPORTS.NS
+HINDALCO.NS
+ONGC.NS
+TATACONSUM.NS
+BPCL.NS
+UPL.NS
+IOC.NS
+ASIANPAINT.NS
+DMART.NS
+TRENT.NS
+ZOMATO.NS
+NYKAA.NS`;
+
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sample_50_stocks.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-function removeStock(symbol) {
-    stocks = stocks.filter(s => s !== symbol);
-    localStorage.setItem('weeklyStocks', JSON.stringify(stocks));
+// Load CSV file
+function loadCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const rows = text.trim().split('\n');
+    stocks = rows.slice(1)
+                 .map(row => row.trim())
+                 .filter(Boolean);
+    
+    localStorage.setItem('stocks', JSON.stringify(stocks));
     renderTable();
-    renderAllCharts();
+    alert(`✅ Loaded ${stocks.length} stocks successfully!`);
+  };
+  reader.readAsText(file);
 }
 
-function clearAll() {
-    if (confirm('Clear all stocks?')) {
-        stocks = [];
-        localStorage.removeItem('weeklyStocks');
-        renderTable();
-        document.getElementById('chartsContainer').innerHTML = '';
-    }
-}
-
-async function refreshAllData() {
-    statusEl.textContent = 'Refreshing data...';
-    stockDataCache = {}; // Clear cache
-    await renderTable();
-    statusEl.textContent = 'Data refreshed!';
-    renderAllCharts();
-}
-
-async function renderAllCharts() {
-    const container = document.getElementById('chartsContainer');
-    container.innerHTML = '';
-    
-    for (let symbol of stocks) {
-        const card = document.createElement('div');
-        card.className = 'chart-card';
-        card.innerHTML = `
-            <h4>${symbol}</h4>
-            <canvas id="chart-${symbol.replace('.', '_')}" width="380" height="220"></canvas>
-        `;
-        container.appendChild(card);
-        
-        // Fetch weekly data and render chart
-        try {
-            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1wk&range=6mo`);
-            const data = await res.json();
-            
-            if (data.chart && data.chart.result) {
-                const result = data.chart.result[0];
-                const timestamps = result.timestamp;
-                const closes = result.indicators.quote[0].close;
-                
-                const labels = timestamps.map(ts => new Date(ts * 1000).toLocaleDateString('en-IN', {month:'short', day:'numeric'}));
-                const chartData = closes.filter(c => c !== null);
-                
-                new Chart(document.getElementById(`chart-${symbol.replace('.', '_')}`), {
-                    type: 'line',
-                    data: {
-                        labels: labels.slice(-chartData.length),
-                        datasets: [{
-                            label: 'Weekly Close',
-                            data: chartData,
-                            borderColor: '#1e3a8a',
-                            tension: 0.3,
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: false } }
-                    }
-                });
-            }
-        } catch (e) {
-            console.error('Chart error for', symbol);
-        }
-    }
-}
-
-// Load saved list
-stocks = JSON.parse(localStorage.getItem('weeklyStocks')) || [];
-renderTable();
-
-// Auto-refresh every 10 minutes
-setInterval(() => {
-    if (stocks.length > 0) refreshAllData();
-}, 600000);
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  renderTable();
+});
