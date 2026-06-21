@@ -9,15 +9,12 @@
 <body>
   <div class="container">
     <h1>📈 Weekly Stock Tracker (NSE)</h1>
-    <p>Track up to 50+ stocks • Weekly % Change • <strong>Click symbol</strong> to open TradingView</p>
-    <p><strong>Version 1.1</strong> • TradingView Integration</p>
+    <p>Track your stocks • Weekly % Change • Click symbol to open TradingView</p>
+    <p><strong>Version 1.2</strong> • Custom Add (Symbol or Link)</p>
 
     <div class="controls">
-      <button onclick="downloadSampleCSV()">📥 Download Sample 50 Stocks CSV</button>
-      <label class="upload-btn">
-        📤 Load CSV File
-        <input type="file" id="csvInput" accept=".csv" onchange="loadCSV(event)">
-      </label>
+      <input type="text" id="addInput" placeholder="Enter symbol (RELIANCE.NS) or TradingView link" style="width: 420px; padding: 12px; font-size: 15px;">
+      <button onclick="addStockFromInput()">➕ Add Stock</button>
       <button onclick="refreshAllData()">🔄 Refresh All Data</button>
     </div>
 
