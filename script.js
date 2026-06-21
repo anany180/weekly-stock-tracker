@@ -112,3 +112,17 @@ async function refreshAllData() {
 document.addEventListener('DOMContentLoaded', () => {
   renderTable();
 });
+// Clear entire watchlist
+function clearWatchlist() {
+  if (stocks.length === 0) {
+    alert("Watchlist is already empty");
+    return;
+  }
+
+  if (confirm("Are you sure you want to clear the entire watchlist? This cannot be undone.")) {
+    stocks = [];
+    localStorage.setItem('stocks', JSON.stringify(stocks));
+    renderTable();
+    alert("✅ Watchlist cleared successfully!");
+  }
+}
