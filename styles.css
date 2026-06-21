@@ -105,3 +105,11 @@ th {
   flex-wrap: wrap;
   align-items: center;
 }
+.clear-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.clear-btn:hover {
+  background: #dc2626;
+}
